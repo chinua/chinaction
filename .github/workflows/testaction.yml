@@ -12,13 +12,79 @@ env:
   COLOR: "Blue"
   # Setting an environment variable with the value of a configuration variable
   env_var: ${{ vars.ENV_CONTEXT_VAR }}
+  BAMBOO_KEY: "${{ vars.BUILD_KEY || format('{0}-{1}-{2}', github.workflow, github.job, github.run_id) }}"
   
 jobs:
+  job1a:
+    runs-on: windows-latest
+    steps:
+      - name: Set powershell
+        id: set-powershell
+        env:
+          g.workspace: ${{ github.workspace }}
+          g_workspace: $env:GITHUB_WORKSPACE
+        run: |
+          Write-Output "github.workspace ->  ${{ github.workspace }}"
+          Write-Output "__GITHUB_WORKSPACE ->  $env:GITHUB_WORKSPACE"
+          Write-Output "BAMBOO_KEY -123->  ${{ env.BAMBOO_KEY }}"
+          $cost = '5.23'
+          Write-Output "Cost is $cost 11" 
+          Write-Output "COST=${cost}" >> $env:GITHUB_OUTPUT
+          Write-Output "COST1=${cost}" >> $env:GITHUB_ENV
+          $myVariable = "Hello World"
+          Write-Output "myOutputa=${myVariable}" >> $env:GITHUB_OUTPUT
+      - name: Internal use powershell
+        id: set-powershell2
+        run: |
+          Write-Output "Internal Cost is ${{ env.COST }}"
+          Write-Output "Internal Cost1 is ${{ env.COST1 }}"
+
+      # Step 2: Create an environment variable using PowerShell
+      - name: Create Env Variable
+        id: create-env
+        run: |
+          $env:MY_CUSTOM_VAR = "Hello from PowerShell"
+          Write-Host "MY_CUSTOM_VAR=$env:MY_CUSTOM_VAR" >> $env:GITHUB_ENV
+      # Step 3: Use the environment variable in the next step
+      - name: Use Env Variable
+        run: |
+          echo "The value of MY_CUSTOM_VAR is: $MY_CUSTOM_VAR"
+    outputs:
+      COST: ${{ steps.set-powershell.outputs.COST}}
+      MYOUTPUTA: ${{ steps.set-powershell.outputs.myOutputa}}  
+
+  job2a:
+    env:
+      COST: ${{ needs.job1a.outputs.COST }}
+      MYOUTPUTA: ${{ needs.job1a.outputs.MYOUTPUTA }}  
+    needs: job1a
+    runs-on: windows-latest
+    steps:
+      - name: Use powershell Variable
+        run: |
+          Write-Output "COST: ${{ env.COST }}"
+          Write-Output "MYOUTPUTA: ${{ env.MYOUTPUTA }}"
+          Write-Output "TEST_STATUS: ${{ env.COST }}  --->  MYOUTPUTA: ${{ env.MYOUTPUTA }}">> $GITHUB_STEP_SUMMARY
+          
   job1:
     runs-on: ubuntu-latest
     steps:
       - name: Set Variable
-        run: echo "MY_VARIABLEX=my_value1" >> $GITHUB_ENV #this is workflow scoped
+        env:
+          g_workspace: $GITHUB_WORKSPACE
+          g.workspace: ${{ github.workspace }}
+        run: |
+          echo "linux github.workspace = ${{ github.workspace }}"
+          echo "linux GITHUB_WORKSPACE = $GITHUB_WORKSPACE"
+          echo "MY_VARIABLEX=my_value1" >> $GITHUB_ENV #this is workflow scoped
+      - name: Use again
+        run: | 
+          echo "linux github.workspace = ${{ github.workspace }}"
+          echo "linux GITHUB_WORKSPACE = $GITHUB_WORKSPACE"
+          $cost = 5.23
+
+          $myVariable = "Hello World"
+          #Write-Output "::set-output name=myOutput::${myVariable}"
 
   job2:
     needs: job1
@@ -33,7 +99,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Set environment variable
+        env:
+          g_workspace: $GITHUB_WORKSPACE
+          g.workspace: ${{ github.workspace }}
         run: |- 
+          echo "linux github.workspace = ${{ github.workspace }}"
+          echo "linux GITHUB_WORKSPACE = $GITHUB_WORKSPACE"
           echo "MY_ENV_VAR=myValue" >> $GITHUB_ENV
           echo "BALANCE=80" >> $GITHUB_ENV
           echo "SIZE=Large" >> $GITHUB_ENV
@@ -77,7 +148,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Use environment variable
+        id: usevar1
         run: |-
+          TEST_STATUS="FAILED"
+          TEST_STATUS1="PASSED"
+          SECOND_RUN="FALSE"
+          echo "TEST_STATUS: $TEST_STATUS"
+          echo "TEST_STATUS=$TEST_STATUS" >> "$GITHUB_ENV"
+          echo "TEST_STATUS=$TEST_STATUS" >> "$GITHUB_OUTPUT"
+          echo "TEST_STATUS1=${TEST_STATUS1}" >> "$GITHUB_ENV"
+          echo "SECOND_RUN=$SECOND_RUN" >> "$GITHUB_ENV"
+          echo "SECOND_RUN=$SECOND_RUN" >> "$GITHUB_OUTPUT"
+          echo "Test Status: $TEST_STATUS" >> "$GITHUB_STEP_SUMMARY"
           echo "V2: The value of MY_ENV_VAR is $MY_ENV_VAR" >> $GITHUB_STEP_SUMMARY
           echo "Workspace: ${{ github.workspace }}">> $GITHUB_STEP_SUMMARY
           echo "SIZE : $SIZE ">> $GITHUB_STEP_SUMMARY
@@ -99,7 +181,11 @@ jobs:
         
       - name: Set Output
         id: step1
-        run: echo "::set-output name=my_output::my_value"
+        run: |
+          echo "Test Status --> ${{ env.TEST_STATUS }}"
+          echo "Test Status 1 ||--> ${{ env.TEST_STATUS1 }}"
+          echo "SECOND_RUN ||--> ${{ env.SECOND_RUN }}"
+          echo "::set-output name=my_output::my_value"
       - name: Use Output
         run: echo "${{ steps.step1.outputs.my_output }}"
       - name: Get color

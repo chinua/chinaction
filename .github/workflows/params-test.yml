@@ -1,0 +1,89 @@
+name: Modernization UEM Services Tier1 Development
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      uem-services-plan:
+        description: 'UEM Services Plan'
+        type: string
+        required: true
+      airwatch-ci-upload-branch:
+        description: 'Airwatch-ci-upload-to-artifactory branch'
+        type: string
+        default: 'main'
+      dev-qe-clusters-branch:
+        description: 'Dev-qe-clusters branch'
+        type: string
+        default: 'ttp-master'
+      uem-services-tier-1-tests-branch:
+        description: 'Uem-services-tier-1-tests branch'
+        type: string
+        default: 'main'
+      uem-services-promoter-branch:
+        description: 'Uem-services-promoter branch'
+        type: string
+        default: 'main'
+      canonical-dev-qe-clusters-branch:
+        description: 'Canonical-dev-qe-clusters branch'
+        type: string
+        default: 'main'
+      uem-apigw-branch:
+        description: 'Uem-apigw branch'
+        type: string
+        default: 'main'
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  BUILD_NUMBER: '${{ github.run_id }}-${{ github.run_attempt }}'
+  
+jobs:
+  Win-Build:
+    runs-on: windows-latest
+    steps:
+      - name: Current
+        run: |
+          Write-Output "<details><summary>Labels</summary>" >> $env:GITHUB_STEP_SUMMARY
+          Write-Output "" >> $env:GITHUB_STEP_SUMMARY
+          Write-Output "uem_canonical_build_key: ${{ env.BUILD_NUMBER }} </details>" >> $env:GITHUB_STEP_SUMMARY
+          echo ":error:User Tom is not permitted to trigger this workflow" >> $GITHUB_STEP_SUMMARY
+          echo "::error:: User Sammy is not permitted to trigger this workflow" 
+      - name: Add labels to summary
+        run: |
+          Write-Output "<details><summary>Labels</summary>" >> $env:GITHUB_STEP_SUMMARY
+          Write-Output "" >> $env:GITHUB_STEP_SUMMARY
+          Write-Output "- Key1: Value1" >> $env:GITHUB_STEP_SUMMARY
+          Write-Output "- Key2: Value2" >> $env:GITHUB_STEP_SUMMARY
+          Write-Output "- Key3: Value3" >> $env:GITHUB_STEP_SUMMARY
+          Write-Output "</details>" >> $env:GITHUB_STEP_SUMMARY
+          $cost = '5.23'
+          Write-Output "Cost is $cost 11" 
+          Write-Output "COST=${cost}" >> $env:GITHUB_OUTPUT
+          Write-Output "COST1=${cost}" >> $env:GITHUB_ENV
+  Linux-Build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add labels to summary
+        run: |
+          echo "<details><summary>Labels</summary>" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Key1: Value1" >> $GITHUB_STEP_SUMMARY
+          echo "- Key2: Value2" >> $GITHUB_STEP_SUMMARY
+          echo "- Key3: Value3" >> $GITHUB_STEP_SUMMARY
+          echo "</details>" >> $GITHUB_STEP_SUMMARY
+          echo "::error::User Finn is not permitted to trigger this workflow"
+      - name: Rand job
+        if: ${{ github.ref == 'refs/heads/main' }}
+        run: |
+          echo "This is Random"
+      - name: Use Variable
+        run: |
+          echo "__ REPO NAME: ${{ github.event.repository.name }}"
+          echo "uemplan: ${{ inputs.uem-services-plan }} airwatch: ${{ inputs.airwatch-ci-upload-branch || 'main' }}" >> $GITHUB_STEP_SUMMARY
+          echo "devqeclusters: ${{ inputs.dev-qe-clusters-branch }} uem-services-promoter: ${{ inputs.uem-services-promoter-branch  || 'main' }}" >> $GITHUB_STEP_SUMMARY
+          echo "canonical-dev-qe-clusters: ${{ inputs.canonical-dev-qe-clusters-branch || 'main' }} uem-apigw: ${{ inputs.uem-apigw-branch || 'main' }}" >> $GITHUB_STEP_SUMMARY
